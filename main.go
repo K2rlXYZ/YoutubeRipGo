@@ -114,11 +114,15 @@ func NewSearchTabChild() Composite {
 						Text: "Search",
 						OnClicked: func() {
 							var found, res = SearchQuery(inSearchQuery.Text())
+							fmt.Println(reflect.TypeOf(res))
 							switch reflect.TypeOf(res) {
 							case reflect.TypeOf(&youtube.Video{}):
 								resultsTableModel.SetResultRowsFromVideo(res.(*youtube.Video))
 							case reflect.TypeOf(&youtube.QueryResponseData{}):
 								resultsTableModel.SetResultRowsFromQueryResponseData(res.(*youtube.QueryResponseData))
+							case reflect.TypeOf([]*youtube.PlaylistEntry{}):
+								fmt.Println(res)
+								resultsTableModel.SetResultRowsFromVideos(res.([]*youtube.PlaylistEntry))
 							}
 							if found {
 								tabWidget.SetCurrentIndex(resultsTabEnum)
@@ -157,9 +161,7 @@ func SearchQuery(query string) (bool, any) {
 			walk.MsgBox(nil, "Error", "Unable to search query, playlist search error:\n"+err.Error(), walk.MsgBoxOK)
 			return false, nil
 		}
-		// TODO: add playlist to return
-		fmt.Println(playlist.Description)
-		return true, nil
+		return true, playlist.Videos
 	}
 
 	res, err := client.SearchWithQuery(query)
@@ -190,12 +192,7 @@ func ImageFromURL(url string) image.Image {
 
 // Results tab Composite
 func NewResultsTabChild() Composite {
-	badIcon, err := walk.Resources.Icon("./img/stop.ico")
 	resultsTableModel = newResultModel()
-	if err != nil {
-		walk.MsgBox(nil, "Error", "Unable to load icon, error:\n"+err.Error(), walk.MsgBoxOK)
-	}
-	fmt.Println(badIcon)
 	return Composite{
 		Layout: VBox{},
 		Children: []Widget{
@@ -208,28 +205,55 @@ func NewResultsTabChild() Composite {
 				MultiSelection:   true,
 				Font:             Font{Family: "Segoe UI", PointSize: 16},
 				Columns: []TableViewColumn{
-					{Title: "ID"},
+					{Title: ""},
 					{Title: "Title", Width: 200},
-					{Title: "Description", Width: 200},
+					{Title: "Description", Width: 300},
 					{Title: "Channel name", Width: 200},
-					{Title: "Thumbnail", Alignment: AlignFar},
+					{Title: "ID", Width: 200},
+					{Title: "Thumbnail", Alignment: AlignCenter, Width: 160},
 				},
+				CustomRowHeight: 90,
 				StyleCell: func(style *walk.CellStyle) {
 					item := resultsTableModel.items[style.Row()]
-
-					switch style.Col() {
-					case 4:
-						fmt.Println(item.ThumbnailUrl)
-						img := ImageFromURL(item.ThumbnailUrl)
-						var err error
-						var bitmpTemp *walk.Bitmap
-						bitmpTemp, err = walk.NewBitmapFromImageForDPI(img, resultsTableView.DPI()*10)
-						bitmap := bitmpTemp
-						if err != nil {
-							walk.MsgBox(nil, "Error", "Unable to create bitmap from image, "+item.ThumbnailUrl+",\nerror:\n"+err.Error(), walk.MsgBoxOK)
+					if item.checked {
+						if style.Row()%2 == 0 {
+							style.BackgroundColor = walk.RGB(159, 215, 255)
+						} else {
+							style.BackgroundColor = walk.RGB(143, 199, 239)
 						}
-						style.Image = bitmap
-						style.TextColor = walk.RGB(255, 0, 0)
+					}
+					switch style.Col() {
+					case 0:
+						style.TextColor = style.BackgroundColor
+					// Thumbnail column
+					case 5:
+						if item.Image == nil {
+							img := ImageFromURL(item.ThumbnailUrl)
+							var err error
+							var bitmap *walk.Bitmap
+							bitmap, err = walk.NewBitmapFromImageForDPI(img, resultsTableView.DPI())
+							if err != nil {
+								walk.MsgBox(nil, "Error", "Unable to create bitmap from image, "+item.ThumbnailUrl+",\nerror:\n"+err.Error(), walk.MsgBoxOK)
+							}
+							item.Image, err = walk.ImageFrom(bitmap)
+							if err != nil {
+								walk.MsgBox(nil, "Error", "Unable to create walk image from bitmap, "+item.ThumbnailUrl+",\nerror:\n"+err.Error(), walk.MsgBoxOK)
+							}
+						}
+						if canvas := style.Canvas(); canvas != nil {
+							bounds := style.Bounds()
+
+							err := canvas.DrawImageStretchedPixels(item.Image,
+								walk.Rectangle{
+									X:      bounds.X,
+									Y:      bounds.Y,
+									Width:  item.Image.Size().Width / 2,
+									Height: item.Image.Size().Height / 2,
+								})
+							if err != nil {
+								walk.MsgBox(nil, "Error", "Unable to draw walk image to canvas, "+item.ThumbnailUrl+",\nerror:\n"+err.Error(), walk.MsgBoxOK)
+							}
+						}
 					}
 				},
 				Model: resultsTableModel,
