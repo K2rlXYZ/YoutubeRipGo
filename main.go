@@ -4,10 +4,14 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/kkdai/youtube/v2"
+	youtube "github.com/KarlMul/youtubeGo"
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
 )
+
+type MyClient struct {
+	*youtube.Client
+}
 
 func main() {
 	mainWindow = MainWindow{
@@ -49,12 +53,17 @@ func main() {
 	mainWindow.Run()
 }
 
-var inSearchQuery *walk.TextEdit
 var mainWindow MainWindow
-var searchComposite Composite
-var resultsComposite Composite
-var downloadsComposite Composite
 var tabWidget *walk.TabWidget
+
+var searchComposite Composite
+var inSearchQuery *walk.TextEdit
+
+var resultsComposite Composite
+var resultsTableView *walk.TableView
+var resultsTableModel *ResultModel
+
+var downloadsComposite Composite
 
 // Enums have to be in the same order as tabWidget pages for tab switching to work properly
 const (
@@ -126,6 +135,7 @@ func SearchQuery(query string) bool {
 			return false
 		}
 		// TODO: add video to return
+		resultsTableModel.SetResultRowsFromVideo(video)
 		fmt.Println(video.Description)
 		return true
 	}
@@ -143,26 +153,54 @@ func SearchQuery(query string) bool {
 		return true
 	}
 
+	// TODO implement this
+	// client.SearchWithQuery(query)
+
 	walk.MsgBox(nil, "Error", "Unable to search query", walk.MsgBoxOK)
 	return false
 }
 
 // Results tab Composite
 func NewResultsTabChild() Composite {
+	resultsTableModel = newResultModel()
 	return Composite{
 		Layout: VBox{},
 		Children: []Widget{
 			VSpacer{},
 
-			PushButton{
-				MaxSize: Size{
-					Width:  100,
-					Height: 30,
+			TableView{
+				AssignTo:         &resultsTableView,
+				AlternatingRowBG: true,
+				CheckBoxes:       true,
+				ColumnsOrderable: true,
+				MultiSelection:   true,
+				Columns: []TableViewColumn{
+					{Title: "ID"},
+					{Title: "Title"},
+					{Title: "Description"},
+					{Title: "Channel name"},
+					{Title: "Thumbnail"},
 				},
-				Text: "Search",
-				OnClicked: func() {
-
+				StyleCell: func(style *walk.CellStyle) {
+					item := resultsTableModel.items[style.Row()]
+					if canvas := style.Canvas(); canvas != nil {
+						fnt := resultsTableView.Font()
+						bnds := style.Bounds()
+						switch style.Col() {
+						case 0:
+							canvas.DrawTextPixels(item.ID, fnt, 0, bnds, walk.TextLeft)
+						case 1:
+							canvas.DrawTextPixels(item.Title, fnt, 0, bnds, walk.TextLeft)
+						case 2:
+							canvas.DrawTextPixels(item.Description, fnt, 0, bnds, walk.TextLeft)
+						case 3:
+							canvas.DrawTextPixels(item.ChannelTitle, fnt, 0, bnds, walk.TextLeft)
+						case 4:
+							canvas.DrawTextPixels(item.ThumbnailUrl, fnt, 0, bnds, walk.TextLeft)
+						}
+					}
 				},
+				Model: resultsTableModel,
 			},
 			VSpacer{},
 		},
