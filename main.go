@@ -2,16 +2,14 @@ package main
 
 import (
 	"fmt"
-	"reflect"
 
-	youtube "github.com/KarlMul/youtubeGo"
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
 )
 
 func main() {
 	mainWindow = MainWindow{
-		Title: "SCREAMO",
+		Title: "",
 		MinSize: Size{
 			Width:  600,
 			Height: 400},
@@ -19,8 +17,7 @@ func main() {
 	}
 	searchComposite = NewSearchTabChild()
 	resultsComposite = NewResultsTabChild()
-	// TODO: make DownloadsComposite function
-	// downloadsWindow = DownloadsComposite()
+	downloadsComposite = NewDownloadsTabChild()
 	mainWindow.Children = []Widget{
 		TabWidget{
 			AssignTo: &tabWidget,
@@ -61,6 +58,8 @@ var resultsTableView *walk.TableView
 var resultsTableModel *ResultModel
 
 var downloadsComposite Composite
+var downloadsTableView *walk.TableView
+var downloadsTableModel *DownloadModel
 
 // Enums have to be in the same order as tabWidget pages for tab switching to work properly
 const (
@@ -87,7 +86,12 @@ func NewSearchTabChild() Composite {
 						MaxSize: Size{
 							Width: 1000,
 						},
-						Font:     Font{Family: "Segoe UI", PointSize: 16},
+						Font: Font{Family: "Segoe UI", PointSize: 16},
+						OnKeyPress: walk.KeyEventHandler(func(key walk.Key) {
+							if key == walk.KeyReturn {
+								OnSearch()
+							}
+						}),
 						AssignTo: &inSearchQuery,
 					},
 					HSpacer{},
@@ -103,23 +107,8 @@ func NewSearchTabChild() Composite {
 							Width:  100,
 							Height: 30,
 						},
-						Text: "Search",
-						OnClicked: func() {
-							var found, res = SearchQuery(inSearchQuery.Text())
-							fmt.Println(reflect.TypeOf(res))
-							switch reflect.TypeOf(res) {
-							case reflect.TypeOf(&youtube.Video{}):
-								resultsTableModel.SetResultRowsFromVideo(res.(*youtube.Video))
-							case reflect.TypeOf(&youtube.QueryResponseData{}):
-								resultsTableModel.SetResultRowsFromQueryResponseData(res.(*youtube.QueryResponseData))
-							case reflect.TypeOf([]*youtube.PlaylistEntry{}):
-								fmt.Println(res)
-								resultsTableModel.SetResultRowsFromVideos(res.([]*youtube.PlaylistEntry))
-							}
-							if found {
-								tabWidget.SetCurrentIndex(resultsTabEnum)
-							}
-						},
+						Text:      "Search",
+						OnClicked: OnSearch,
 					},
 					HSpacer{},
 				},
@@ -135,7 +124,6 @@ func NewResultsTabChild() Composite {
 	return Composite{
 		Layout: VBox{},
 		Children: []Widget{
-			VSpacer{},
 			TableView{
 				AssignTo:         &resultsTableView,
 				AlternatingRowBG: true,
@@ -200,7 +188,97 @@ func NewResultsTabChild() Composite {
 					fmt.Printf("SelectedIndexes: %v\n", resultsTableView.SelectedIndexes())
 				},
 			},
-			VSpacer{},
+			Composite{
+				Layout: HBox{},
+				Children: []Widget{
+					PushButton{
+						MaxSize: Size{
+							Width:  100,
+							Height: 30,
+						},
+						Text: "Check all",
+						OnClicked: func() {
+							resultsTableModel.CheckAll()
+						},
+					},
+					PushButton{
+						MaxSize: Size{
+							Width:  100,
+							Height: 30,
+						},
+						Text: "Download selected",
+						OnClicked: func() {
+							var res = resultsTableModel.GetAllChecked()
+							if len(res) > 0 {
+								downloadsTableModel.SetDownloadRowsFromResults(res)
+							}
+						},
+					},
+					HSpacer{},
+				},
+			},
+		},
+	}
+}
+
+// Downloads tab Composite
+func NewDownloadsTabChild() Composite {
+	downloadsTableModel := newDownloadModel()
+	return Composite{
+		Layout: VBox{},
+		Children: []Widget{
+			TableView{
+				AssignTo:         &downloadsTableView,
+				AlternatingRowBG: true,
+				CheckBoxes:       true,
+				ColumnsOrderable: true,
+				MultiSelection:   true,
+				Font:             Font{Family: "Segoe UI", PointSize: 16},
+				Columns: []TableViewColumn{
+					{Title: ""},
+					{Title: "Progress", Width: 200},
+					{Title: "Title", Width: 200},
+					{Title: "Channel name", Width: 200},
+					{Title: "Thumbnail", Alignment: AlignCenter, Width: 160},
+				},
+				CustomRowHeight: 90,
+				StyleCell: func(style *walk.CellStyle) {
+					item := downloadsTableModel.items[style.Row()]
+					switch style.Col() {
+					// Thumbnail column
+					case 4:
+						if canvas := style.Canvas(); canvas != nil {
+							bounds := style.Bounds()
+							err := canvas.DrawImageStretchedPixels(item.Image,
+								walk.Rectangle{
+									X:      bounds.X,
+									Y:      bounds.Y,
+									Width:  180,
+									Height: 90,
+								})
+							if err != nil {
+								walk.MsgBox(nil, "Error", "Unable to draw walk image to canvas, "+item.ThumbnailUrl+",\nerror:\n"+err.Error(), walk.MsgBoxOK)
+							}
+						}
+					}
+				},
+				Model: downloadsTableModel,
+			},
+			Composite{
+				Layout: HBox{},
+				Children: []Widget{
+					PushButton{
+						MaxSize: Size{
+							Width:  100,
+							Height: 30,
+						},
+						Text: "Cancel all",
+						// TODO: Make this
+						OnClicked: func() {},
+					},
+					HSpacer{},
+				},
+			},
 		},
 	}
 }

@@ -29,7 +29,7 @@ type ResultModel struct {
 
 func newResultModel() *ResultModel {
 	m := new(ResultModel)
-	m.items = make([]*Result, 0)
+	m.items = make([]*Result, 1)
 	m.PublishRowsReset()
 	return m
 }
@@ -150,6 +150,22 @@ func (m *ResultModel) SetResultRowsFromVideos(videos []*youtube.PlaylistEntry) {
 	}
 
 	m.PublishRowsReset()
+}
+
+func (m *ResultModel) CheckAll() {
+	for i := 0; i < len(m.items); i++ {
+		m.items[i].checked = true
+	}
+}
+
+func (m *ResultModel) GetAllChecked() []*Result {
+	var arr []*Result
+	for i := 0; i < len(m.items); i++ {
+		if m.items[i].checked {
+			arr = append(arr, m.items[i])
+		}
+	}
+	return arr
 }
 
 func ImageFromURL(url string) image.Image {
