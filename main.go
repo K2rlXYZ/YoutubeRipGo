@@ -223,7 +223,7 @@ func NewResultsTabChild() Composite {
 
 // Downloads tab Composite
 func NewDownloadsTabChild() Composite {
-	downloadsTableModel := newDownloadModel()
+	downloadsTableModel = newDownloadModel()
 	return Composite{
 		Layout: VBox{},
 		Children: []Widget{
