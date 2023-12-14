@@ -5,65 +5,68 @@ import (
 	. "github.com/lxn/walk/declarative"
 )
 
-var inSearch *walk.TextEdit
+func main() {
+	mainWindow = MainWindow{
+		Title: "SCREAMO",
+		MinSize: Size{
+			Width:  600,
+			Height: 400},
+		Layout: HBox{},
+	}
+	searchComposite = NewSearchTabChild()
+	resultsComposite = NewResultsTabChild()
+	// TODO: make DownloadsComposite function
+	// downloadsWindow = DownloadsComposite()
+	mainWindow.Children = []Widget{
+		TabWidget{
+			AssignTo: &tabWidget,
+			Pages: []TabPage{
+				{
+					Name:     "Search",
+					Title:    "Search",
+					Layout:   HBox{},
+					Children: []Widget{searchComposite},
+				},
+				{
+					Name:     "Results",
+					Title:    "Results",
+					Layout:   HBox{},
+					Children: []Widget{resultsComposite},
+				},
+				{
+					Name:     "Downloads",
+					Title:    "Downloads",
+					Layout:   HBox{},
+					Children: []Widget{downloadsComposite},
+				},
+			},
+		},
+	}
+	mainWindow.Run()
+}
+
+var inSearchQuery *walk.TextEdit
+var mainWindow MainWindow
+var searchComposite Composite
+var resultsComposite Composite
+var downloadsComposite Composite
+var tabWidget *walk.TabWidget
 
 var tabButtonWidth int = 60
 
-// Tab Composite
-func TabComposite() Composite {
-	return Composite{
-		Layout:    HBox{},
-		Alignment: AlignHNearVNear,
-		Children: []Widget{
-			Composite{
-				Layout:    HBox{},
-				Alignment: AlignHNearVNear,
-				Children: []Widget{
-					PushButton{
-						Alignment: AlignHNearVNear,
-						Text:      "Search",
-						MaxSize: Size{
-							Width: tabButtonWidth,
-						},
-					},
-					PushButton{
-						Alignment: AlignHNearVNear,
-						Text:      "Results",
-						MaxSize: Size{
-							Width: tabButtonWidth,
-						},
-					},
-					PushButton{
-						Alignment: AlignHNearVNear,
-						Text:      "Downloads",
-						MaxSize: Size{
-							Width: tabButtonWidth,
-						},
-					},
-					/*
-						PushButton{
-							Alignment: AlignHNearVNear,
-							Text: "Browse",
-							MaxSize: Size{
-								Width: tabButtonWidth,
-							},
-						},
-					*/
-				},
-			},
-			HSpacer{},
-			HSpacer{},
-		},
-	}
-}
+// Enums have to be in the same order as tabWidget pages for tab switching to work properly
+const (
+	searchTabEnum    = iota
+	resultsTabEnum   = iota
+	downloadsTabEnum = iota
+)
 
-func SearchWindow() Composite {
+// Search tab Composite
+func NewSearchTabChild() Composite {
 	return Composite{
 		Layout: VBox{},
 		Children: []Widget{
-			TabComposite(),
 			VSpacer{},
-			//Search query Composite
 			Composite{
 				Layout: HBox{},
 				MaxSize: Size{
@@ -77,7 +80,7 @@ func SearchWindow() Composite {
 							Width: 1000,
 						},
 						Font:     Font{Family: "Segoe UI", PointSize: 16},
-						AssignTo: &inSearch,
+						AssignTo: &inSearchQuery,
 					},
 					HSpacer{},
 				},
@@ -94,7 +97,9 @@ func SearchWindow() Composite {
 						},
 						Text: "Search",
 						OnClicked: func() {
-							walk.MsgBox(nil, "Button Clicked", "You clicked the button.", walk.MsgBoxOK)
+							// TODO: add search functionality
+							// TODO: add search results to resultsComposite
+							tabWidget.SetCurrentIndex(resultsTabEnum)
 						},
 					},
 					HSpacer{},
@@ -105,14 +110,24 @@ func SearchWindow() Composite {
 	}
 }
 
-func main() {
-	var mainWindow = MainWindow{
-		Title: "SCREAMO",
-		MinSize: Size{
-			Width:  600,
-			Height: 400},
-		Layout: HBox{},
+// Results tab Composite
+func NewResultsTabChild() Composite {
+	return Composite{
+		Layout: VBox{},
+		Children: []Widget{
+			VSpacer{},
+
+			PushButton{
+				MaxSize: Size{
+					Width:  100,
+					Height: 30,
+				},
+				Text: "Search",
+				OnClicked: func() {
+
+				},
+			},
+			VSpacer{},
+		},
 	}
-	mainWindow.Children = []Widget{SearchWindow()}
-	mainWindow.Run()
 }
