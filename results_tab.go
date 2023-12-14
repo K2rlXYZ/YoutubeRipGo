@@ -29,7 +29,7 @@ type ResultModel struct {
 
 func newResultModel() *ResultModel {
 	m := new(ResultModel)
-	m.items = make([]*Result, 1)
+	m.items = make([]*Result, 0)
 	m.PublishRowsReset()
 	return m
 }

@@ -210,7 +210,8 @@ func NewResultsTabChild() Composite {
 						OnClicked: func() {
 							var res = resultsTableModel.GetAllChecked()
 							if len(res) > 0 {
-								downloadsTableModel.SetDownloadRowsFromResults(res)
+								downloadsTableModel.SetAndStartDownloadsFromResults(res)
+								tabWidget.SetCurrentIndex(downloadsTabEnum)
 							}
 						},
 					},
@@ -274,7 +275,13 @@ func NewDownloadsTabChild() Composite {
 						},
 						Text: "Cancel all",
 						// TODO: Make this
-						OnClicked: func() {},
+						OnClicked: func() {
+							for _, item := range downloadsTableModel.items {
+								item.cancelFunc()
+							}
+							downloadsTableModel.items = make([]*Download, 0)
+							downloadsTableModel.PublishRowsReset()
+						},
 					},
 					HSpacer{},
 				},
