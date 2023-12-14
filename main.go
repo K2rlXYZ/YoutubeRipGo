@@ -2,20 +2,12 @@ package main
 
 import (
 	"fmt"
-	"image"
-	"image/jpeg"
-	"net/http"
 	"reflect"
-	"regexp"
 
 	youtube "github.com/KarlMul/youtubeGo"
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
 )
-
-type MyClient struct {
-	*youtube.Client
-}
 
 func main() {
 	mainWindow = MainWindow{
@@ -135,59 +127,6 @@ func NewSearchTabChild() Composite {
 			VSpacer{},
 		},
 	}
-}
-
-func SearchQuery(query string) (bool, any) {
-	var client = youtube.Client{
-		YtApiv3Key: YtApiv3KEY,
-	}
-
-	var videoPattern, _ = regexp.Compile(`(?:watch\?v=)([\w-]*)|(?:https:\/\/youtu\.be\/)([\w-]*)(?:\?si)`)
-	var matchedVideoUrl = videoPattern.FindString(query)
-	if matchedVideoUrl != "" {
-		var video, err = client.GetVideo(query)
-		if err != nil {
-			walk.MsgBox(nil, "Error", "Unable to search query, video search error:\n"+err.Error(), walk.MsgBoxOK)
-			return false, nil
-		}
-		return true, video
-	}
-
-	var playlistPattern, _ = regexp.Compile(`(?:playlist\?list=)([\w-]*)(?:&si|$)`)
-	var matchedplaylistUrl = playlistPattern.FindString(query)
-	if matchedplaylistUrl != "" {
-		var playlist, err = client.GetPlaylist(query)
-		if err != nil {
-			walk.MsgBox(nil, "Error", "Unable to search query, playlist search error:\n"+err.Error(), walk.MsgBoxOK)
-			return false, nil
-		}
-		return true, playlist.Videos
-	}
-
-	res, err := client.SearchWithQuery(query)
-	if err != nil {
-		walk.MsgBox(nil, "Error", "Unable to search query, error:\n"+err.Error(), walk.MsgBoxOK)
-		return false, nil
-	}
-	return true, res
-}
-
-func ImageFromURL(url string) image.Image {
-	response, err := http.Get(url)
-	if err != nil {
-		walk.MsgBox(nil, "Error", "Unable to download thumbnail, "+url+",\nerror:\n"+err.Error(), walk.MsgBoxOK)
-	}
-
-	if response.StatusCode != 200 {
-		walk.MsgBox(nil, "Error", "Didn't recieve 200 response code when downloading thumbnail, "+url, walk.MsgBoxOK)
-	}
-	defer response.Body.Close()
-
-	img, err := jpeg.Decode(response.Body)
-	if err != nil {
-		walk.MsgBox(nil, "Error", "Unable to decode thumbnail, "+url+"\nerror:\n"+err.Error(), walk.MsgBoxOK)
-	}
-	return img
 }
 
 // Results tab Composite

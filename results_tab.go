@@ -1,6 +1,9 @@
 package main
 
 import (
+	"image"
+	"image/jpeg"
+	"net/http"
 	"strings"
 
 	youtube "github.com/KarlMul/youtubeGo"
@@ -147,4 +150,22 @@ func (m *ResultModel) SetResultRowsFromVideos(videos []*youtube.PlaylistEntry) {
 	}
 
 	m.PublishRowsReset()
+}
+
+func ImageFromURL(url string) image.Image {
+	response, err := http.Get(url)
+	if err != nil {
+		walk.MsgBox(nil, "Error", "Unable to download thumbnail, "+url+",\nerror:\n"+err.Error(), walk.MsgBoxOK)
+	}
+
+	if response.StatusCode != 200 {
+		walk.MsgBox(nil, "Error", "Didn't recieve 200 response code when downloading thumbnail, "+url, walk.MsgBoxOK)
+	}
+	defer response.Body.Close()
+
+	img, err := jpeg.Decode(response.Body)
+	if err != nil {
+		walk.MsgBox(nil, "Error", "Unable to decode thumbnail, "+url+"\nerror:\n"+err.Error(), walk.MsgBoxOK)
+	}
+	return img
 }
