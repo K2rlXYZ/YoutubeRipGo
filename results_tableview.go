@@ -17,9 +17,7 @@ type Result struct {
 type ResultModel struct {
 	walk.TableModelBase
 	walk.SorterBase
-	sortColumn int
-	sortOrder  walk.SortOrder
-	items      []*Result
+	items []*Result
 }
 
 func newResultModel() *ResultModel {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 
 	youtube "github.com/KarlMul/youtubeGo"
@@ -58,6 +59,7 @@ var tabWidget *walk.TabWidget
 
 var searchComposite Composite
 var inSearchQuery *walk.TextEdit
+var YtApiv3KEY = "AIzaSyDnbVoEtQ-nTcS-P4tIGUbSkWd2RBnpHgY"
 
 var resultsComposite Composite
 var resultsTableView *walk.TableView
@@ -108,8 +110,13 @@ func NewSearchTabChild() Composite {
 						},
 						Text: "Search",
 						OnClicked: func() {
-							var found = SearchQuery(inSearchQuery.Text())
-							// TODO: add search results to resultsComposite
+							var found, res = SearchQuery(inSearchQuery.Text())
+							switch reflect.TypeOf(res) {
+							case reflect.TypeOf(youtube.Video{}):
+								resultsTableModel.SetResultRowsFromVideo(res.(*youtube.Video))
+							case reflect.TypeOf(&youtube.QueryResponseData{}):
+								resultsTableModel.SetResultRowsFromQueryResponseData(res.(*youtube.QueryResponseData))
+							}
 							if found {
 								tabWidget.SetCurrentIndex(resultsTabEnum)
 							}
@@ -123,8 +130,10 @@ func NewSearchTabChild() Composite {
 	}
 }
 
-func SearchQuery(query string) bool {
-	var client = new(youtube.Client)
+func SearchQuery(query string) (bool, any) {
+	var client = youtube.Client{
+		YtApiv3Key: YtApiv3KEY,
+	}
 
 	var videoPattern, _ = regexp.Compile(`(?:watch\?v=)([\w-]*)|(?:https:\/\/youtu\.be\/)([\w-]*)(?:\?si)`)
 	var matchedVideoUrl = videoPattern.FindString(query)
@@ -132,12 +141,9 @@ func SearchQuery(query string) bool {
 		var video, err = client.GetVideo(query)
 		if err != nil {
 			walk.MsgBox(nil, "Error", "Unable to search query, video search error:\n"+err.Error(), walk.MsgBoxOK)
-			return false
+			return false, nil
 		}
-		// TODO: add video to return
-		resultsTableModel.SetResultRowsFromVideo(video)
-		fmt.Println(video.Description)
-		return true
+		return true, video
 	}
 
 	var playlistPattern, _ = regexp.Compile(`(?:playlist\?list=)([\w-]*)(?:&si|$)`)
@@ -146,18 +152,19 @@ func SearchQuery(query string) bool {
 		var playlist, err = client.GetPlaylist(query)
 		if err != nil {
 			walk.MsgBox(nil, "Error", "Unable to search query, playlist search error:\n"+err.Error(), walk.MsgBoxOK)
-			return false
+			return false, nil
 		}
 		// TODO: add playlist to return
 		fmt.Println(playlist.Description)
-		return true
+		return true, nil
 	}
 
-	// TODO implement this
-	// client.SearchWithQuery(query)
-
-	walk.MsgBox(nil, "Error", "Unable to search query", walk.MsgBoxOK)
-	return false
+	res, err := client.SearchWithQuery(query)
+	if err != nil {
+		walk.MsgBox(nil, "Error", "Unable to search query, error:\n"+err.Error(), walk.MsgBoxOK)
+		return false, nil
+	}
+	return true, res
 }
 
 // Results tab Composite
@@ -174,12 +181,13 @@ func NewResultsTabChild() Composite {
 				CheckBoxes:       true,
 				ColumnsOrderable: true,
 				MultiSelection:   true,
+				Font:             Font{Family: "Segoe UI", PointSize: 16},
 				Columns: []TableViewColumn{
 					{Title: "ID"},
-					{Title: "Title"},
-					{Title: "Description"},
-					{Title: "Channel name"},
-					{Title: "Thumbnail"},
+					{Title: "Title", Width: 200},
+					{Title: "Description", Width: 200},
+					{Title: "Channel name", Width: 200},
+					{Title: "Thumbnail", Width: 200},
 				},
 				StyleCell: func(style *walk.CellStyle) {
 					item := resultsTableModel.items[style.Row()]
