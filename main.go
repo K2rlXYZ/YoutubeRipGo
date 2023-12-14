@@ -1,6 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"regexp"
+
+	"github.com/kkdai/youtube/v2"
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
 )
@@ -52,8 +56,6 @@ var resultsComposite Composite
 var downloadsComposite Composite
 var tabWidget *walk.TabWidget
 
-var tabButtonWidth int = 60
-
 // Enums have to be in the same order as tabWidget pages for tab switching to work properly
 const (
 	searchTabEnum    = iota
@@ -97,9 +99,11 @@ func NewSearchTabChild() Composite {
 						},
 						Text: "Search",
 						OnClicked: func() {
-							// TODO: add search functionality
+							var found = SearchQuery(inSearchQuery.Text())
 							// TODO: add search results to resultsComposite
-							tabWidget.SetCurrentIndex(resultsTabEnum)
+							if found {
+								tabWidget.SetCurrentIndex(resultsTabEnum)
+							}
 						},
 					},
 					HSpacer{},
@@ -108,6 +112,39 @@ func NewSearchTabChild() Composite {
 			VSpacer{},
 		},
 	}
+}
+
+func SearchQuery(query string) bool {
+	var client = new(youtube.Client)
+
+	var videoPattern, _ = regexp.Compile(`(?:watch\?v=)([\w-]*)|(?:https:\/\/youtu\.be\/)([\w-]*)(?:\?si)`)
+	var matchedVideoUrl = videoPattern.FindString(query)
+	if matchedVideoUrl != "" {
+		var video, err = client.GetVideo(query)
+		if err != nil {
+			walk.MsgBox(nil, "Error", "Unable to search query, video search error:\n"+err.Error(), walk.MsgBoxOK)
+			return false
+		}
+		// TODO: add video to return
+		fmt.Println(video.Description)
+		return true
+	}
+
+	var playlistPattern, _ = regexp.Compile(`(?:playlist\?list=)([\w-]*)(?:&si|$)`)
+	var matchedplaylistUrl = playlistPattern.FindString(query)
+	if matchedplaylistUrl != "" {
+		var playlist, err = client.GetPlaylist(query)
+		if err != nil {
+			walk.MsgBox(nil, "Error", "Unable to search query, playlist search error:\n"+err.Error(), walk.MsgBoxOK)
+			return false
+		}
+		// TODO: add playlist to return
+		fmt.Println(playlist.Description)
+		return true
+	}
+
+	walk.MsgBox(nil, "Error", "Unable to search query", walk.MsgBoxOK)
+	return false
 }
 
 // Results tab Composite
