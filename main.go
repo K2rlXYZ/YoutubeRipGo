@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"image"
+	"image/jpeg"
+	"net/http"
 	"reflect"
 	"regexp"
 
@@ -167,14 +170,43 @@ func SearchQuery(query string) (bool, any) {
 	return true, res
 }
 
+func ImageFromURL(url string) image.Image {
+	response, err := http.Get(url)
+	if err != nil {
+		walk.MsgBox(nil, "Error", "Unable to download thumbnail, "+url+",\nerror:\n"+err.Error(), walk.MsgBoxOK)
+	}
+
+	if response.StatusCode != 200 {
+		walk.MsgBox(nil, "Error", "Didn't recieve 200 response code when downloading thumbnail, "+url, walk.MsgBoxOK)
+	}
+	defer response.Body.Close()
+
+	img, err := jpeg.Decode(response.Body)
+	if err != nil {
+		walk.MsgBox(nil, "Error", "Unable to decode thumbnail, "+url+"\nerror:\n"+err.Error(), walk.MsgBoxOK)
+	}
+	return img
+}
+
 // Results tab Composite
 func NewResultsTabChild() Composite {
 	resultsTableModel = newResultModel()
+	barBitmap, err := walk.NewBitmap(walk.Size{100, 1})
+	if err != nil {
+		panic(err)
+	}
+	defer barBitmap.Dispose()
+
+	canvas, err := walk.NewCanvasFromImage(barBitmap)
+	if err != nil {
+		panic(err)
+	}
+	canvas.Dispose()
+	defer barBitmap.Dispose()
 	return Composite{
 		Layout: VBox{},
 		Children: []Widget{
 			VSpacer{},
-
 			TableView{
 				AssignTo:         &resultsTableView,
 				AlternatingRowBG: true,
@@ -204,7 +236,20 @@ func NewResultsTabChild() Composite {
 						case 3:
 							canvas.DrawTextPixels(item.ChannelTitle, fnt, 0, bnds, walk.TextLeft)
 						case 4:
-							canvas.DrawTextPixels(item.ThumbnailUrl, fnt, 0, bnds, walk.TextLeft)
+							img := ImageFromURL(item.ThumbnailUrl)
+							var err error
+							var bitmp *walk.Bitmap
+							bitmp, err = walk.NewBitmapFromImageForDPI(img, canvas.DPI())
+							if err != nil {
+								walk.MsgBox(nil, "Error", "Unable to create bitmap from image, "+item.ThumbnailUrl+",\nerror:\n"+err.Error(), walk.MsgBoxOK)
+							}
+							style.Image = bitmp
+							fmt.Println(style.Image)
+							fmt.Println(style.Bounds().Width)
+							fmt.Println(bitmp.Size().Width)
+							fmt.Println(style.Bounds().Height)
+							fmt.Println(bitmp.Size().Height)
+							fmt.Println()
 						}
 					}
 				},
