@@ -247,8 +247,8 @@ func NewResultsTabChild() Composite {
 								walk.Rectangle{
 									X:      bounds.X,
 									Y:      bounds.Y,
-									Width:  item.Image.Size().Width / 2,
-									Height: item.Image.Size().Height / 2,
+									Width:  180,
+									Height: 90,
 								})
 							if err != nil {
 								walk.MsgBox(nil, "Error", "Unable to draw walk image to canvas, "+item.ThumbnailUrl+",\nerror:\n"+err.Error(), walk.MsgBoxOK)
