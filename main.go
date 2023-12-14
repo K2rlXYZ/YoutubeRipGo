@@ -115,7 +115,7 @@ func NewSearchTabChild() Composite {
 						OnClicked: func() {
 							var found, res = SearchQuery(inSearchQuery.Text())
 							switch reflect.TypeOf(res) {
-							case reflect.TypeOf(youtube.Video{}):
+							case reflect.TypeOf(&youtube.Video{}):
 								resultsTableModel.SetResultRowsFromVideo(res.(*youtube.Video))
 							case reflect.TypeOf(&youtube.QueryResponseData{}):
 								resultsTableModel.SetResultRowsFromQueryResponseData(res.(*youtube.QueryResponseData))
@@ -190,19 +190,12 @@ func ImageFromURL(url string) image.Image {
 
 // Results tab Composite
 func NewResultsTabChild() Composite {
+	badIcon, err := walk.Resources.Icon("./img/stop.ico")
 	resultsTableModel = newResultModel()
-	barBitmap, err := walk.NewBitmap(walk.Size{100, 1})
 	if err != nil {
-		panic(err)
+		walk.MsgBox(nil, "Error", "Unable to load icon, error:\n"+err.Error(), walk.MsgBoxOK)
 	}
-	defer barBitmap.Dispose()
-
-	canvas, err := walk.NewCanvasFromImage(barBitmap)
-	if err != nil {
-		panic(err)
-	}
-	canvas.Dispose()
-	defer barBitmap.Dispose()
+	fmt.Println(badIcon)
 	return Composite{
 		Layout: VBox{},
 		Children: []Widget{
@@ -219,41 +212,30 @@ func NewResultsTabChild() Composite {
 					{Title: "Title", Width: 200},
 					{Title: "Description", Width: 200},
 					{Title: "Channel name", Width: 200},
-					{Title: "Thumbnail", Width: 200},
+					{Title: "Thumbnail", Alignment: AlignFar},
 				},
 				StyleCell: func(style *walk.CellStyle) {
 					item := resultsTableModel.items[style.Row()]
-					if canvas := style.Canvas(); canvas != nil {
-						fnt := resultsTableView.Font()
-						bnds := style.Bounds()
-						switch style.Col() {
-						case 0:
-							canvas.DrawTextPixels(item.ID, fnt, 0, bnds, walk.TextLeft)
-						case 1:
-							canvas.DrawTextPixels(item.Title, fnt, 0, bnds, walk.TextLeft)
-						case 2:
-							canvas.DrawTextPixels(item.Description, fnt, 0, bnds, walk.TextLeft)
-						case 3:
-							canvas.DrawTextPixels(item.ChannelTitle, fnt, 0, bnds, walk.TextLeft)
-						case 4:
-							img := ImageFromURL(item.ThumbnailUrl)
-							var err error
-							var bitmp *walk.Bitmap
-							bitmp, err = walk.NewBitmapFromImageForDPI(img, canvas.DPI())
-							if err != nil {
-								walk.MsgBox(nil, "Error", "Unable to create bitmap from image, "+item.ThumbnailUrl+",\nerror:\n"+err.Error(), walk.MsgBoxOK)
-							}
-							style.Image = bitmp
-							fmt.Println(style.Image)
-							fmt.Println(style.Bounds().Width)
-							fmt.Println(bitmp.Size().Width)
-							fmt.Println(style.Bounds().Height)
-							fmt.Println(bitmp.Size().Height)
-							fmt.Println()
+
+					switch style.Col() {
+					case 4:
+						fmt.Println(item.ThumbnailUrl)
+						img := ImageFromURL(item.ThumbnailUrl)
+						var err error
+						var bitmpTemp *walk.Bitmap
+						bitmpTemp, err = walk.NewBitmapFromImageForDPI(img, resultsTableView.DPI()*10)
+						bitmap := bitmpTemp
+						if err != nil {
+							walk.MsgBox(nil, "Error", "Unable to create bitmap from image, "+item.ThumbnailUrl+",\nerror:\n"+err.Error(), walk.MsgBoxOK)
 						}
+						style.Image = bitmap
+						style.TextColor = walk.RGB(255, 0, 0)
 					}
 				},
 				Model: resultsTableModel,
+				OnSelectedIndexesChanged: func() {
+					fmt.Printf("SelectedIndexes: %v\n", resultsTableView.SelectedIndexes())
+				},
 			},
 			VSpacer{},
 		},

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	youtube "github.com/KarlMul/youtubeGo"
 	"github.com/lxn/walk"
 )
@@ -11,7 +13,6 @@ type Result struct {
 	Description  string
 	ChannelTitle string
 	ThumbnailUrl string
-	checked      bool
 }
 
 type ResultModel struct {
@@ -65,7 +66,7 @@ func (m *ResultModel) Value(row, col int) interface{} {
 	panic("unexpected col")
 }
 
-// Called by the TableView to retrieve if a given row is checked.
+/*// Called by the TableView to retrieve if a given row is checked.
 func (m *ResultModel) Checked(row int) bool {
 	return m.items[row].checked
 }
@@ -75,7 +76,7 @@ func (m *ResultModel) SetChecked(row int, checked bool) error {
 	m.items[row].checked = checked
 
 	return nil
-}
+}*/
 
 func (m *ResultModel) SetResultRowsFromQueryResponseData(results *youtube.QueryResponseData) {
 	amount := len(results.Items)
@@ -97,12 +98,22 @@ func (m *ResultModel) SetResultRowsFromQueryResponseData(results *youtube.QueryR
 func (m *ResultModel) SetResultRowsFromVideo(video *youtube.Video) {
 	m.items = make([]*Result, 1)
 
+	var jpgUrl = strings.Replace(
+		strings.Replace(
+			video.Thumbnails[1].URL,
+			"vi_webp",
+			"vi",
+			1),
+		".webp",
+		".jpg",
+		1)
+
 	m.items[0] = &Result{
 		ID:           video.ID,
 		Title:        video.Title,
 		Description:  video.Description,
 		ChannelTitle: video.ChannelHandle,
-		ThumbnailUrl: video.Thumbnails[1].URL,
+		ThumbnailUrl: jpgUrl,
 	}
 
 	m.PublishRowsReset()
